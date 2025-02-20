@@ -708,9 +708,11 @@ func GetModelNs(module *YParserModule) (ns, prefix string) {
 func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 	underWhen bool, whenExpr *WhenExpression) {
 
+	CVL_LOG(WARNING, "getModelChildInfo [ENTER]")
 	for sChild := node.child; sChild != nil; sChild = sChild.next {
 		switch sChild.nodetype {
 		case C.LYS_LIST:
+			CVL_LOG(WARNING, "  * child %s is LIST", C.GoString(sChild.name))
 			nodeInnerList := (*C.struct_lys_node_list)(unsafe.Pointer(sChild))
 			innerListkeys := (*[10]*C.struct_lys_node_leaf)(unsafe.Pointer(nodeInnerList.keys))
 			if nodeInnerList.keys_size == 1 {
@@ -731,8 +733,10 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 				TRACE_LOG(TRACE_YPARSER, "Inner List %s for Dynamic fields has %d keys", listName, nodeInnerList.keys_size)
 			}
 		case C.LYS_USES:
+			CVL_LOG(WARNING, "  * child %s is USES", C.GoString(sChild.name))
 			nodeUses := (*C.struct_lys_node_uses)(unsafe.Pointer(sChild))
 			if nodeUses.when != nil {
+				CVL_LOG(WARNING, "    * when: ", C.GoString(nodeUses.when.cond))
 				usesWhenExp := WhenExpression{
 					Expr: C.GoString(nodeUses.when.cond),
 				}
@@ -744,8 +748,10 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 				getModelChildInfo(l, sChild, false, nil)
 			}
 		case C.LYS_CHOICE:
+			CVL_LOG(WARNING, "  * child %s is CHOICE", C.GoString(sChild.name))
 			nodeChoice := (*C.struct_lys_node_choice)(unsafe.Pointer(sChild))
 			if nodeChoice.when != nil {
+				CVL_LOG(WARNING, "    * when: ", C.GoString(nodeChoice.when.cond))
 				chWhenExp := WhenExpression{
 					Expr: C.GoString(nodeChoice.when.cond),
 				}
@@ -757,8 +763,10 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 				getModelChildInfo(l, sChild, false, nil)
 			}
 		case C.LYS_CASE:
+			CVL_LOG(WARNING, "  * child %s is CASE", C.GoString(sChild.name))
 			nodeCase := (*C.struct_lys_node_case)(unsafe.Pointer(sChild))
 			if nodeCase.when != nil {
+				CVL_LOG(WARNING, "    * when: ", C.GoString(nodeCase.when.cond))
 				csWhenExp := WhenExpression{
 					Expr: C.GoString(nodeCase.when.cond),
 				}
@@ -782,10 +790,12 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 			leafName := C.GoString(sleaf.name)
 
 			if sChild.nodetype == C.LYS_LEAF {
+				CVL_LOG(WARNING, "  * child %s is LEAF", C.GoString(sChild.name))
 				if sleaf.dflt != nil {
 					l.DfltLeafVal[leafName] = C.GoString(sleaf.dflt)
 				}
 			} else {
+				CVL_LOG(WARNING, "  * child %s is LEAFLIST", C.GoString(sChild.name))
 				sLeafList := (*C.struct_lys_node_leaflist)(unsafe.Pointer(sChild))
 				if sleaf.dflt != nil {
 					//array of default values
@@ -793,6 +803,7 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 
 					tmpValStr := ""
 					for idx := 0; idx < int(sLeafList.dflt_size); idx++ {
+						CVL_LOG(WARNING, "    * default: %s", C.GoString(dfltValArr[idx]))
 						if idx > 0 {
 							//Separate multiple values by ,
 							tmpValStr = tmpValStr + ","
@@ -825,6 +836,7 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 			if leafRefs != nil {
 				leafRefPaths := (*[10]*C.char)(unsafe.Pointer(&leafRefs.path))
 				for idx := 0; idx < int(leafRefs.count); idx++ {
+					CVL_LOG(WARNING, "    * leafref: %s", C.GoString(leafRefPaths[idx]))
 					l.LeafRef[leafName] = append(l.LeafRef[leafName],
 						C.GoString(leafRefPaths[idx]))
 				}
@@ -834,6 +846,7 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 			if sleaf.must_size > 0 {
 				must := (*[20]C.struct_lys_restr)(unsafe.Pointer(sleaf.must))
 				for idx := 0; idx < int(sleaf.must_size); idx++ {
+					CVL_LOG(WARNING, "    * must: %s", C.GoString(must[idx].expr))
 					exp := XpathExpression{Expr: C.GoString(must[idx].expr)}
 
 					if must[idx].eapptag != nil {
@@ -850,6 +863,7 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 
 			//Check for when expression
 			if sleaf.when != nil {
+				CVL_LOG(WARNING, "    * when: %s", C.GoString(sleaf.when.cond))
 				l.WhenExpr[leafName] = append(l.WhenExpr[leafName],
 					&WhenExpression{
 						Expr:      C.GoString(sleaf.when.cond),
@@ -861,6 +875,7 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 			if sleaf.ext_size > 0 {
 				exts := (*[10]*C.struct_lys_ext_instance)(unsafe.Pointer(sleaf.ext))
 				for idx := 0; idx < int(sleaf.ext_size); idx++ {
+					CVL_LOG(WARNING, "    * ext: %s", C.GoString(exts[idx].def.name))
 					if C.GoString(exts[idx].def.name) == "custom-validation" {
 						argVal := C.GoString(exts[idx].arg_value)
 						if argVal != "" {
@@ -872,12 +887,14 @@ func getModelChildInfo(l *YParserListInfo, node *C.struct_lys_node,
 
 			// check for mandatory flag
 			if (sChild.flags & C.LYS_MAND_MASK) == C.LYS_MAND_TRUE {
+				CVL_LOG(WARNING, "    * MANDATORY")
 				l.MandatoryNodes[leafName] = true
 			} else if (sChild.flags & C.LYS_MAND_MASK) == C.LYS_MAND_FALSE {
 				l.MandatoryNodes[leafName] = false
 			}
 		}
 	}
+	CVL_LOG(WARNING, "getModelChildInfo [EXIT]")
 }
 
 // GetModelListInfo Get model info for YANG list and its subtree
@@ -885,10 +902,14 @@ func GetModelListInfo(module *YParserModule) []*YParserListInfo {
 	var list []*YParserListInfo
 
 	mod := (*C.struct_lys_module)(module)
+
+	CVL_LOG(WARNING, "GetModelListInfo: module %s [ENTER]", C.GoString(mod.name))
+
 	set := C.lys_find_path(mod, nil,
 		C.CString(fmt.Sprintf("/%s/*", C.GoString(mod.name))))
 
 	if set == nil {
+		CVL_LOG(WARNING, "GetModelListInfo: module %s [EXIT]: no containers", C.GoString(mod.name))
 		return nil
 	}
 
@@ -898,9 +919,12 @@ func GetModelListInfo(module *YParserModule) []*YParserListInfo {
 		snodec := (*C.struct_lys_node_container)(unsafe.Pointer(snode))
 		slist := (*C.struct_lys_node_list)(unsafe.Pointer(snodec.child))
 
+		CVL_LOG(WARNING, " * Container %s", C.GoString(snode.name))
+
 		//for each list
 		for ; slist != nil; slist = (*C.struct_lys_node_list)(unsafe.Pointer(slist.next)) {
 			var l YParserListInfo
+			CVL_LOG(WARNING, "   * List %s", C.GoString(slist.name))
 			listName := C.GoString(slist.name)
 			l.RedisTableName = C.GoString(snodec.name)
 
@@ -931,6 +955,7 @@ func GetModelListInfo(module *YParserModule) []*YParserListInfo {
 			//Add keys
 			keys := (*[10]*C.struct_lys_node_leaf)(unsafe.Pointer(slist.keys))
 			for idx := 0; idx < int(slist.keys_size); idx++ {
+				CVL_LOG(WARNING, "     * Leaf %s", C.GoString(keys[idx].name))
 				keyName := C.GoString(keys[idx].name)
 				l.Keys = append(l.Keys, keyName)
 			}
@@ -939,6 +964,7 @@ func GetModelListInfo(module *YParserModule) []*YParserListInfo {
 			if slist.must_size > 0 {
 				must := (*[10]C.struct_lys_restr)(unsafe.Pointer(slist.must))
 				for idx := 0; idx < int(slist.must_size); idx++ {
+					CVL_LOG(WARNING, "     * Must %s", C.GoString(must[idx].expr))
 					exp := XpathExpression{Expr: C.GoString(must[idx].expr)}
 					if must[idx].eapptag != nil {
 						exp.ErrCode = C.GoString(must[idx].eapptag)
@@ -956,7 +982,7 @@ func GetModelListInfo(module *YParserModule) []*YParserListInfo {
 			if slist.ext_size > 0 {
 				exts := (*[10]*C.struct_lys_ext_instance)(unsafe.Pointer(slist.ext))
 				for idx := 0; idx < int(slist.ext_size); idx++ {
-
+					CVL_LOG(WARNING, "     * Ext %s", C.GoString(exts[idx].def.name))
 					extName := C.GoString(exts[idx].def.name)
 					argVal := C.GoString(exts[idx].arg_value)
 
@@ -997,5 +1023,7 @@ func GetModelListInfo(module *YParserModule) []*YParserListInfo {
 	} //each container
 
 	C.free(unsafe.Pointer(set))
+	CVL_LOG(WARNING, "GetModelListInfo: module %s [EXIT]", C.GoString(mod.name))
+
 	return list
 }
