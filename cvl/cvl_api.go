@@ -521,8 +521,6 @@ func (c *CVL) ValidateEditConfig(cfgData []cmn.CVLEditConfigData) (cvlErr CVLErr
 				CVL_LOG(WARNING, "\nValidateEditConfig(): OP_CREATE - Err = %v ", err1)
 			}
 
-			c.yp.SetOperation("CREATE")
-
 		case cmn.OP_UPDATE:
 			n, err1 := c.dbAccess.Exists(cfgData[i].Key).Result()
 			if err1 != nil || n == 0 { //key must exists
@@ -541,8 +539,6 @@ func (c *CVL) ValidateEditConfig(cfgData []cmn.CVLEditConfigData) (cvlErr CVLErr
 				continue
 			}
 
-			c.yp.SetOperation("UPDATE")
-
 		case cmn.OP_DELETE:
 			n, err1 := c.dbAccess.Exists(cfgData[i].Key).Result()
 			if err1 != nil || n == 0 { //key must exists
@@ -554,8 +550,6 @@ func (c *CVL) ValidateEditConfig(cfgData []cmn.CVLEditConfigData) (cvlErr CVLErr
 				cvlErrObj.Keys = splitKeyComponents(tbl, key)
 				return cvlErrObj, CVL_SEMANTIC_KEY_NOT_EXIST
 			}
-
-			c.yp.SetOperation("DELETE")
 		}
 
 		yangListName := getRedisTblToYangList(tbl, key)

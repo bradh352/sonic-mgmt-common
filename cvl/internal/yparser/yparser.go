@@ -235,8 +235,6 @@ type YParserModule C.struct_lys_module
 
 var ypCtx *YParserCtx
 var ypOpModule *YParserModule
-var ypOpRoot *YParserNode //Operation root
-var ypOpNode *YParserNode //Operation node
 
 type XpathExpression struct {
 	Expr    string
@@ -380,12 +378,6 @@ func ParseSchemaFile(modelFile string) (*YParserModule, YParserError) {
 		return nil, getErrorDetails()
 	}
 
-	if strings.Contains(modelFile, "sonic-common.yin") {
-		ypOpModule = (*YParserModule)(module)
-		ypOpRoot = (*YParserNode)(C.lyd_new(nil, (*C.struct_lys_module)(ypOpModule), C.CString("operation")))
-		ypOpNode = (*YParserNode)(C.lyd_new_leaf((*C.struct_lyd_node)(ypOpRoot), (*C.struct_lys_module)(ypOpModule), C.CString("operation"), C.CString("NOP")))
-	}
-
 	return (*YParserModule)(module), YParserError{ErrCode: YP_SUCCESS}
 }
 
@@ -502,20 +494,6 @@ func (yp *YParser) DestroyCache() YParserError {
 		yp.root = nil
 	}
 
-	return YParserError{ErrCode: YP_SUCCESS}
-}
-
-// SetOperation Set operation
-func (yp *YParser) SetOperation(op string) YParserError {
-	if ypOpNode == nil {
-		return YParserError{ErrCode: YP_INTERNAL_UNKNOWN}
-	}
-
-	if C.lyd_change_leaf_data((*C.struct_lyd_node)(ypOpNode), C.CString(op)) != 0 {
-		return YParserError{ErrCode: YP_INTERNAL_UNKNOWN}
-	}
-
-	yp.operation = op
 	return YParserError{ErrCode: YP_SUCCESS}
 }
 
