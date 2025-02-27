@@ -483,10 +483,6 @@ func (c *CVL) ValidateEditConfig(cfgData []cmn.CVLEditConfigData) (cvlErr CVLErr
 		//Get dependent data from Redis
 		depData := c.fetchDataToTmpCache() //fetch data to temp cache for temporary validation
 		if checkSyntax {
-			CVL_LOG(WARNING, "yang data:")
-			c.yp.PrintNodes(yang)
-			CVL_LOG(WARNING, "dep data:")
-			c.yp.PrintNodes(depData)
 			if cvlErrObj, cvlRetCode := c.validateSyntax(yang, depData); cvlRetCode != CVL_SUCCESS {
 				return cvlErrObj, cvlRetCode
 			}

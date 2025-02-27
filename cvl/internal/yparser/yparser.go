@@ -444,11 +444,11 @@ func (yp *YParser) AddMultiLeafNodes(module *YParserModule, parent *YParserNode,
 
 }
 
-func (yp *YParser) PrintNodes(root *YParserNode) {
+func (yp *YParser) PrintNodes(msg string, root *YParserNode) {
 	var outBuf *C.char
 	C.lyd_print_mem(&outBuf, (*C.struct_lyd_node)(root), C.LYD_JSON, C.LYP_WITHSIBLINGS)
 	defer C.free(unsafe.Pointer(outBuf))
-	CVL_LOG(WARNING, "Node Dump: %s", C.GoString(outBuf))
+	CVL_LOG(WARNING, "%s: %s", msg, C.GoString(outBuf))
 }
 
 // NodeDump Return entire subtree in XML format in string
@@ -519,8 +519,7 @@ func (yp *YParser) ValidateSyntax(data, depData *YParserNode) YParserError {
 		}
 	}
 
-	CVL_LOG(WARNING, "ValidateSyntax for nodes:")
-	yp.PrintNodes((*YParserNode)(dataTmp))
+	yp.PrintNodes("ValidateSyntax nodes to be verified", (*YParserNode)(dataTmp))
 
 	//Just validate syntax
 	if C.lyd_data_validate(&dataTmp, C.LYD_OPT_EDIT|C.LYD_OPT_NOEXTDEPS, (*C.struct_ly_ctx)(ypCtx)) != 0 {
